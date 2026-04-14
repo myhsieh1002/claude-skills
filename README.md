@@ -16,6 +16,7 @@ can load at the beginning of a conversation via `git clone`.
 | `exam-question-bank/exam-image-extractor/` | 題目圖片擷取 — Extract images from exam PDFs, map to question records via text matching, and upload to Supabase Storage |
 | `exam-question-bank/supabase-question-import/` | 題庫匯入Supabase — Import structured question JSON into Supabase with batch upsert, AES-256-GCM encryption, and image handling |
 | `exam-question-bank/open-dataset-collector/` | 開源題庫蒐集 — Collect exam questions from HuggingFace datasets, official sample PDFs, and other open sources |
+| `exam-question-bank/exam-trend-analyzer/` | 出題傾向分析 — Full pipeline from Supabase fetch → basic stats → keyword frequency → Claude topic tagging → recent-vs-old comparison → hot keyword detection → topic stability → priority recommendations → formatted Word report |
 
 ## Usage
 
@@ -27,6 +28,6 @@ or
 > 請幫我修復 App Store 退件問題
 
 or for exam question bank tasks:
-> 幫我解析考題PDF / 匯入題庫到Supabase / 擷取題目圖片 / 蒐集開源題目
+> 幫我解析考題PDF / 匯入題庫到Supabase / 擷取題目圖片 / 蒐集開源題目 / 分析 X 科出題傾向
 
 Claude will automatically clone this repo and read the relevant SKILL.md.
