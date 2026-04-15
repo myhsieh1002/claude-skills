@@ -78,5 +78,7 @@ exam-trend-analyzer/
 ## Notes
 
 - The deep-analysis keyword library is nursing/clinical-heavy; for non-medical exams supply `--keywords-file`
-- Topic tagging is cached in `json_output/_topic_cache.json` — safe to resume after interruption
+- Topic tagging is cached per-category at `json_output/_topic_cache_<app>_<category>.json` — safe to resume and safe to reuse the same working directory across different subjects
+- Stale cache entries whose IDs are not in the current input are discarded automatically
+- `ANTHROPIC_API_KEY` is looked up from env → `./.env.local` → walking up to `examproadmin/.env.local` → skill-relative fallback
 - Year parsing expects a `NNN年` pattern in `source` (Taiwan minguo year)

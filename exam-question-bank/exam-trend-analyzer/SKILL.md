@@ -76,9 +76,16 @@ python3 scripts/analyze_subject.py tag --input json_output/<category>.json --app
 ```
 Output: `json_output/<category>_tagged.json` (each question has `topic` field)
 
-Uses Claude Sonnet 4.6 in batches of 25. Cached in `json_output/_topic_cache.json`.
+Uses Claude Sonnet 4.6 in batches of 25. Cached per-category in
+`json_output/_topic_cache_<app>_<category>.json` — different subjects never
+cross-contaminate, and cache entries whose IDs are absent from the current
+input are ignored automatically.
 
-Requires `ANTHROPIC_API_KEY` environment variable OR a `.env.local` file in an adjacent `examproadmin` folder.
+Requires `ANTHROPIC_API_KEY`. Lookup order:
+1. `ANTHROPIC_API_KEY` environment variable
+2. `./.env.local` in the current working directory
+3. `examproadmin/.env.local` walking up from CWD (up to 5 levels)
+4. `<skill>/../examproadmin/.env.local`
 
 ### Step 5. Deep analysis (trends + hotspots + stability)
 

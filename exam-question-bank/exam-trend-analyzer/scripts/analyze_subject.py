@@ -246,29 +246,66 @@ def print_keywords(keywords: list[tuple[str, int]]) -> None:
 # AI topic tagging
 # ─────────────────────────────────────────────────────────
 def load_api_key() -> str | None:
+    """Find the Anthropic API key from env or nearby .env.local files.
+
+    Search order:
+      1. $ANTHROPIC_API_KEY
+      2. ./.env.local in CWD
+      3. Walk up from CWD looking for examproadmin/.env.local (up to 5 levels)
+      4. Skill repo sibling: <skill>/../examproadmin/.env.local
+    """
     key = os.environ.get("ANTHROPIC_API_KEY")
     if key:
         return key
-    env_path = Path(__file__).parent.parent / "examproadmin" / ".env.local"
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
+
+    def _read(p: Path) -> str | None:
+        if not p.exists():
+            return None
+        for line in p.read_text().splitlines():
             if line.startswith("ANTHROPIC_API_KEY="):
-                return line.split("=", 1)[1].strip().strip('"')
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+        return None
+
+    candidates = [Path.cwd() / ".env.local"]
+    cur = Path.cwd()
+    for _ in range(5):
+        candidates.append(cur / "examproadmin" / ".env.local")
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    candidates.append(Path(__file__).parent.parent / "examproadmin" / ".env.local")
+
+    for p in candidates:
+        v = _read(p)
+        if v:
+            return v
     return None
 
 
 def tag_topics_with_api(questions: list[dict], topics: list[str],
-                        api_key: str, batch_size: int = 25) -> dict[str, str]:
-    """使用 Claude API 對每題打「考點主題」標籤。回傳 {id: topic}。"""
+                        api_key: str, cache_key: str,
+                        batch_size: int = 25) -> dict[str, str]:
+    """使用 Claude API 對每題打「考點主題」標籤。回傳 {id: topic}。
+
+    cache_key 用來隔離不同分科的快取檔,避免跨分科污染。
+    """
     import anthropic
     client = anthropic.Anthropic(api_key=api_key)
 
+    # Per-category cache (safe for cross-subject runs)
+    safe_key = re.sub(r"[^\w\u4e00-\u9fff]+", "_", cache_key).strip("_") or "default"
+    cache_path = OUTPUT_DIR / f"_topic_cache_{safe_key}.json"
+
     result = {}
-    cache_path = OUTPUT_DIR / "_topic_cache.json"
+    question_ids = {q["id"] for q in questions}
     if cache_path.exists():
-        result = json.loads(cache_path.read_text(encoding="utf-8"))
+        cached = json.loads(cache_path.read_text(encoding="utf-8"))
+        # Only reuse cache entries whose IDs exist in the current input.
+        # This defends against stale/cross-subject caches if the file is reused.
+        result = {k: v for k, v in cached.items() if k in question_ids}
 
     to_do = [q for q in questions if q["id"] not in result]
+    print(f"  cache: {cache_path.name}")
     print(f"  共 {len(questions)} 題，已標 {len(result)}，待標 {len(to_do)}")
 
     topic_list = "\n".join(f"- {t}" for t in topics)
@@ -402,7 +439,9 @@ def cmd_tag(args):
         print("  ERROR: 沒有 API key")
         return
 
-    topic_map = tag_topics_with_api(questions, topics, api_key)
+    topic_map = tag_topics_with_api(
+        questions, topics, api_key, cache_key=f"{app_id}_{cat}"
+    )
     for q in questions:
         q["topic"] = topic_map.get(q["id"])
 
